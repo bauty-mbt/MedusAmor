@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dos medusas, un mismo mar</title>
+<meta name="theme-color" content="#050b24">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Fredoka:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --abyss:#050b24; --deep:#0d2257; --rose:#ff6fa8; --aqua:#62e6ff; --foam:#eaf6ff; --ink:#12335c;
+    --ui:"Fredoka","Trebuchet MS",system-ui,sans-serif;
+    --hand:"Caveat","Segoe Script","Bradley Hand",cursive;
+  }
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%;overflow:hidden}
+  body{font-family:var(--ui);color:#fff;background:var(--abyss);-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+  #stage{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  #rays{position:fixed;inset:-10% -20% 0;pointer-events:none;mix-blend-mode:screen;opacity:.55;
+    background:repeating-linear-gradient(103deg,transparent 0 70px,rgba(130,205,255,.07) 95px,transparent 140px);
+    -webkit-mask-image:linear-gradient(#000,transparent 65%);mask-image:linear-gradient(#000,transparent 65%);
+    animation:sway 26s ease-in-out infinite alternate}
+  @keyframes sway{from{transform:translateX(-4%)}to{transform:translateX(4%)}}
+
+  .tag{position:fixed;left:0;top:0;z-index:2;pointer-events:none;padding:.1rem .6rem;border-radius:99px;white-space:nowrap;
+    font:500 .9rem var(--ui);background:rgba(255,255,255,.1);backdrop-filter:blur(4px);text-shadow:0 0 10px var(--c);opacity:0;transition:opacity .8s}
+  .tag.on{opacity:1}
+
+  #meter{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 18px);transform:translateX(-50%);display:flex;gap:.45rem;font-size:1.5rem;pointer-events:none}
+  #meter span{color:rgba(255,255,255,.28);transition:color .3s,transform .3s}
+  #meter span.on{color:var(--rose);transform:scale(1.2);text-shadow:0 0 14px rgba(255,111,168,.9)}
+  #sound{position:fixed;right:calc(env(safe-area-inset-right,0px) + 14px);top:calc(env(safe-area-inset-top,0px) + 12px);width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:1.15rem;cursor:pointer;backdrop-filter:blur(6px)}
+
+  #bubble{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 66px);transform:translate(-50%,10px);max-width:min(86vw,430px);padding:.5rem 1.2rem .6rem;border-radius:24px;text-align:center;
+    font-family:var(--hand);font-weight:700;font-size:clamp(1.5rem,5.2vw,1.95rem);line-height:1.15;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(8px);
+    opacity:0;transition:opacity .35s,transform .35s;pointer-events:none;text-shadow:0 1px 8px rgba(5,11,36,.6)}
+  #bubble.show{opacity:1;transform:translate(-50%,0)}
+
+  #hint{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 26px);transform:translateX(-50%);width:min(88vw,380px);text-align:center;font-size:.98rem;line-height:1.45;color:rgba(255,255,255,.85);pointer-events:none;transition:opacity .6s}
+  #hint.gone{opacity:0}
+  #gift{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);transform:translate(-50%,20px);padding:.85rem 1.7rem;border:0;border-radius:999px;cursor:pointer;
+    font:600 1.15rem var(--ui);color:var(--abyss);background:linear-gradient(135deg,var(--aqua),var(--rose));box-shadow:0 10px 30px rgba(98,230,255,.4);opacity:0;pointer-events:none;transition:opacity .6s,transform .6s}
+  #gift.show{opacity:1;pointer-events:auto;transform:translate(-50%,0);animation:beat 1.8s ease-in-out .8s infinite}
+  @keyframes beat{0%,100%{box-shadow:0 10px 30px rgba(98,230,255,.4)}50%{box-shadow:0 10px 44px rgba(255,111,168,.85)}}
+
+  .fx{position:fixed;pointer-events:none;z-index:5;font-size:var(--s,24px);animation:rise var(--d,1.8s) ease-out forwards;will-change:transform,opacity}
+  @keyframes rise{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}15%{opacity:1}100%{transform:translate(calc(-50% + var(--dx)),calc(-50% - var(--dy))) scale(1.1) rotate(var(--r));opacity:0}}
+
+  .overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;padding:1.5rem;background:rgba(5,11,36,.6);backdrop-filter:blur(7px);transition:opacity .6s}
+  .overlay[hidden]{display:none}
+  .overlay.out{opacity:0;pointer-events:none}
+  #intro{flex-direction:column;text-align:center;gap:1.1rem}
+  #intro h1{font-weight:600;font-size:clamp(2.1rem,9vw,3.3rem);letter-spacing:-.01em}
+  #intro p{max-width:30ch;font-size:1.15rem;line-height:1.5;color:rgba(255,255,255,.88)}
+  #intro .dots{display:flex;gap:.5rem;justify-content:center;font-size:1.1rem}
+  .btn{margin-top:.4rem;padding:.85rem 1.8rem;border:0;border-radius:999px;cursor:pointer;font:600 1.1rem var(--ui);color:var(--abyss);background:linear-gradient(135deg,var(--aqua),var(--rose))}
+  .btn:focus-visible,#sound:focus-visible,#gift:focus-visible{outline:3px solid #fff;outline-offset:3px}
+
+  #letter .card{width:min(92vw,460px);max-height:86vh;overflow:auto;padding:1.8rem 1.6rem 1.5rem;border-radius:18px;background:var(--foam);color:var(--ink);box-shadow:0 24px 70px rgba(0,0,0,.5);
+    font-family:var(--hand);font-weight:500;font-size:clamp(1.45rem,5vw,1.75rem);line-height:1.3;animation:unfold .7s cubic-bezier(.2,.9,.3,1.2)}
+  @keyframes unfold{from{transform:scale(.7) rotate(-3deg);opacity:0}to{transform:none;opacity:1}}
+  #letter h2{font-weight:700;font-size:2.1rem;margin-bottom:.6rem}
+  #letter p{margin-bottom:.8rem}
+  #letter .sign{text-align:right;font-weight:700;font-size:1.9rem;margin-top:.4rem}
+  #letter .btn{display:block;margin:1.1rem auto 0;font-size:1rem;color:#fff;background:var(--ink)}
+  @media (prefers-reduced-motion:reduce){#rays{animation:none}#gift.show{animation:none}.fx{animation-duration:1s}}
+</style>
+</head>
+<body>
+
+<canvas id="stage" aria-label="Dos medusas luminosas en el mar. Mové el dedo para guiar a la tuya."></canvas>
+<div id="rays"></div>
+<div class="tag" id="tagHer"></div>
+<div class="tag" id="tagHim"></div>
+
+<div id="meter" aria-hidden="true"></div>
+<button id="sound" type="button" aria-label="Silenciar sonido">🔊</button>
+<div id="bubble" role="status" aria-live="polite"></div>
+<p id="hint">Mové el dedo para guiar a tu medusa. Mantené apretado y la mía nada hasta vos.</p>
+<button id="gift" type="button">Una carta para vos</button>
+
+<div id="intro" class="overlay" role="dialog" aria-labelledby="introTitle">
+  <h1 id="introTitle">Para <span data-name></span></h1>
+  <p>El mar es enorme y hay dos medusas. La rosa sos vos. La celeste soy yo.</p>
+  <button id="start" class="btn" type="button">Entrar al mar</button>
+</div>
+
+<div id="letter" class="overlay" role="dialog" aria-labelledby="letterTitle" hidden>
+  <div class="card">
+    <h2 id="letterTitle"></h2>
+    <div id="letterBody"></div>
+    <p class="sign" id="letterSign"></p>
+    <button id="closeLetter" class="btn" type="button">Volver al mar</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ============================================================
+   EDITÁ ESTO: nombres y mensajes. Lo demás ya funciona solo.
+   {name} = su nombre, {me} = tu nombre
+   ============================================================ */
+const CONFIG = {
+  herName: "Gigi",
+  myName: "Bauti",
+  meetsToUnlock: 3, // encuentros necesarios para que aparezca la carta
+
+  greetings: ["La rosa sos vos. La celeste soy yo.", "Ahí estás. Te estaba buscando."],
+  returning: ["Volviste. Seguí nadando conmigo.", "Sabía que ibas a volver."],
+  taps: ["Te vi.", "Mirá cómo brillo para vos.", "Sentí tu toque desde el otro lado.", "Nado hacia vos."],
+  approach: ["Voy para allá.", "Ya estoy yendo."],
+  meets: ["Nos encontramos.", "Cerquita. Así.", "Ya no hay distancia.", "Quedémonos así un ratito."],
+  leave: ["No me quiero ir…", "Volvé a buscarme, ¿sí?", "Quedate cerca."],
+  idle: ["Tocá la pantalla y llevá a tu medusa a donde quieras.", "Mantené apretado y voy a nadar hasta vos.", "Estoy acá, esperándote."],
+  unlock: "Dejé algo para vos en el fondo del mar.",
+
+  letter: [
+    "Aunque el mar sea enorme, yo siempre voy a nadar hacia ti.",
+    "Un día me dijiste que escucharme se sintió como un abrazo. No lo olvido, y por eso cada vez que no puedo estar cerca quiero que estas palabras también lo sean.",
+    "Eres mi persona favorita, wawa. Amo escribirte, amo leerte y me encanta contarte todo, hasta lo más chiquito. Si alguien dice que la distancia no va a poder con nosotros, me da igual: lo que importa es lo que sentimos tú y yo.",
+    "El día que por fin nos veamos te voy a abrazar de verdad, y te voy a acompañar a todos los lugares que te gustan, hasta a tu tribu kpoper, porque ya soy parte de ella.",
+    "Mientras tanto, te amo mucho mucho mucho mucho mucho mucho mucho mucho… y más. Descansa, mi flaca, y no olvides que aquí estoy.",
+    "Tu flaco, y tu futuro esposito."
+  ]
+};
+/* ============================================================ */
+
+const $ = (id) => document.getElementById(id);
+const rand = (a) => a[Math.floor(Math.random() * a.length)];
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const fill = (s) => s.replace(/\{name\}/g, CONFIG.herName).replace(/\{me\}/g, CONFIG.myName);
+const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ---------- Textos ---------- */
+document.querySelectorAll("[data-name]").forEach((el) => (el.textContent = CONFIG.herName));
+document.title = "Dos medusas para " + CONFIG.herName;
+$("letterTitle").textContent = CONFIG.herName + ",";
+$("letterSign").textContent = "— " + CONFIG.myName;
+CONFIG.letter.forEach((t) => { const p = document.createElement("p"); p.textContent = fill(t); $("letterBody").appendChild(p); });
+$("tagHer").textContent = CONFIG.herName; $("tagHer").style.setProperty("--c", "#ff6fa8");
+$("tagHim").textContent = CONFIG.myName; $("tagHim").style.setProperty("--c", "#62e6ff");
+
+/* ---------- Estado ---------- */
+const S = {
+  started: false, down: false, hold: false, downT: 0, moved: 0, lx: 0, ly: 0, holdT: null,
+  px: 0, py: 0, mouse: false, touched: false, tx: 0, ty: 0,
+  tapT: -99999, orbit: 0, tog: 0, counted: false, beatT: 0.7, kick: 0, hisFlash: 0, herKick: 0, emitT: 0,
+  meets: store.get("medusas-meets", 0), lastAct: 0, letterOpen: false
+};
+
+/* ---------- Medidor ---------- */
+const meter = $("meter");
+for (let i = 0; i < CONFIG.meetsToUnlock; i++) { const s = document.createElement("span"); s.textContent = "♥"; meter.appendChild(s); }
+function updateMeter() { [...meter.children].forEach((s, i) => s.classList.toggle("on", i < S.meets)); }
+updateMeter();
+
+/* ---------- Burbuja y corazones DOM ---------- */
+let bubbleTimer;
+function say(text, ms = 3800) {
+  const b = $("bubble");
+  b.textContent = fill(text);
+  b.classList.add("show");
+  clearTimeout(bubbleTimer);
+  bubbleTimer = setTimeout(() => b.classList.remove("show"), ms);
+  S.lastAct = performance.now();
+}
+const FX = ["💗", "💖", "💞", "✨", "🫧"];
+function burstDom(x, y, n = 6, spread = 70) {
+  for (let i = 0; i < n; i++) {
+    const e = document.createElement("span");
+    e.className = "fx"; e.textContent = rand(FX);
+    e.style.left = x + (Math.random() - 0.5) * spread + "px"; e.style.top = y + "px";
+    e.style.setProperty("--s", 18 + Math.random() * 18 + "px");
+    e.style.setProperty("--dx", (Math.random() - 0.5) * 120 + "px");
+    e.style.setProperty("--dy", 90 + Math.random() * 130 + "px");
+    e.style.setProperty("--r", (Math.random() - 0.5) * 50 + "deg");
+    e.style.setProperty("--d", 1.4 + Math.random() * 1.1 + "s");
+    e.addEventListener("animationend", () => e.remove());
+    document.body.appendChild(e);
+  }
+}
+
+/* ---------- Audio ---------- */
+let ac = null, master = null, muted = false, pad = null;
+function audio() {
+  if (!ac) {
+    try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = 1; master.connect(ac.destination); } catch (e) {}
+  }
+  if (ac && ac.state === "suspended") ac.resume();
+  return ac;
+}
+function tone(freq, to, dur, vol, type = "sine") {
+  if (muted) return;
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+  o.type = type; o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(to, t + dur * 0.8);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + 0.05);
+}
+const chime = (f = 660) => tone(f, f * 1.5, 0.4, 0.12);
+const thump = () => { tone(75, 38, 0.22, 0.3); setTimeout(() => tone(70, 36, 0.2, 0.22), 180); };
+function startPad() {
+  const a = audio(); if (!a || pad) return;
+  const g = a.createGain(); g.gain.value = 0.0001; g.connect(master);
+  const os = [98, 147, 196].map((f, i) => { const o = a.createOscillator(); o.type = "sine"; o.frequency.value = f; o.detune.value = i * 4; o.connect(g); o.start(); return o; });
+  g.gain.setTargetAtTime(0.03, a.currentTime, 2);
+  pad = { g, os };
+}
+$("sound").addEventListener("click", () => {
+  muted = !muted;
+  $("sound").textContent = muted ? "🔇" : "🔊";
+  $("sound").setAttribute("aria-label", muted ? "Activar sonido" : "Silenciar sonido");
+  if (master) master.gain.value = muted ? 0 : 1;
+});
+
+/* ---------- Escena ---------- */
+const canvas = $("stage");
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
+
+(() => {
+  const c = document.createElement("canvas"); c.width = 2; c.height = 512;
+  const x = c.getContext("2d"), g = x.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0, "#040a22"); g.addColorStop(0.45, "#0a1d52"); g.addColorStop(0.8, "#1b1a6b"); g.addColorStop(1, "#3d2170");
+  x.fillStyle = g; x.fillRect(0, 0, 2, 512);
+  scene.background = new THREE.CanvasTexture(c);
+})();
+
+function glowTexture() {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const x = c.getContext("2d"), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, "rgba(255,255,255,1)"); g.addColorStop(0.35, "rgba(255,255,255,.35)"); g.addColorStop(1, "rgba(255,255,255,0)");
+  x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+  return new THREE.CanvasTexture(c);
+}
+const GLOW = glowTexture();
+const WHITE = new THREE.Color(0xffffff);
+const ADD = THREE.AdditiveBlending;
+
+const bellVS = `
+varying vec3 vN; varying vec3 vV; varying vec3 vP;
+void main(){
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); vP = position;
+  gl_Position = projectionMatrix * mv;
+}`;
+const bellFS = `
+uniform vec3 uColor; uniform float uGlow;
+varying vec3 vN; varying vec3 vV; varying vec3 vP;
+void main(){
+  float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 1.8);
+  float a = atan(vP.z, vP.x);
+  float rib = 0.82 + 0.18 * sin(a * 12.0);
+  float alpha = (0.16 + f * 0.8) * rib + uGlow * 0.25;
+  vec3 c = mix(uColor, vec3(1.0), f * 0.45 + uGlow * 0.3);
+  gl_FragColor = vec4(c * 1.2, clamp(alpha, 0.0, 1.0));
+}`;
+
+const SEG = 14, N_OUT = 10, N_IN = 4, dummy = new THREE.Object3D(), tmp = new THREE.Vector3();
+
+function makeJelly(hex) {
+  const color = new THREE.Color(hex);
+  const group = new THREE.Group(); scene.add(group);
+  const bellMat = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: color }, uGlow: { value: 0 } },
+    vertexShader: bellVS, fragmentShader: bellFS, transparent: true, depthWrite: false, blending: ADD, side: THREE.DoubleSide
+  });
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2), bellMat);
+  group.add(bell);
+
+  const soft = color.clone().lerp(WHITE, 0.45);
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(0.97, 0.035, 8, 48), new THREE.MeshBasicMaterial({ color: soft, transparent: true, opacity: 0.9, blending: ADD, depthWrite: false }));
+  ring.rotation.x = Math.PI / 2; bell.add(ring);
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4;
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 8), new THREE.MeshBasicMaterial({ color: soft, transparent: true, opacity: 0.55, blending: ADD, depthWrite: false }));
+    p.position.set(Math.cos(a) * 0.33, 0.3, Math.sin(a) * 0.33); p.scale.set(1, 0.5, 1); bell.add(p);
+  }
+  const core = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 12), new THREE.MeshBasicMaterial({ color: soft, transparent: true, opacity: 0.55, blending: ADD, depthWrite: false }));
+  core.position.y = 0.25; bell.add(core);
+
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: GLOW, color, transparent: true, opacity: 0.5, blending: ADD, depthWrite: false }));
+  halo.scale.set(5, 5, 1); halo.position.y = 0.3; group.add(halo);
+
+  const tents = [];
+  for (let k = 0; k < N_OUT + N_IN; k++) {
+    const outer = k < N_OUT;
+    const a = outer ? (k / N_OUT) * Math.PI * 2 : ((k - N_OUT) / N_IN) * Math.PI * 2 + 0.6;
+    tents.push({
+      att: new THREE.Vector3(Math.cos(a) * (outer ? 0.8 : 0.22), 0.02, Math.sin(a) * (outer ? 0.8 : 0.22)),
+      seg: outer ? 0.17 : 0.21, r: outer ? 0.055 : 0.08, pts: [], seed: k * 1.7
+    });
+  }
+  const inst = new THREE.InstancedMesh(new THREE.SphereGeometry(1, 8, 6), new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.8, blending: ADD, depthWrite: false }), tents.length * SEG);
+  inst.frustumCulled = false; scene.add(inst);
+
+  return { group, bell, bellMat, halo, inst, tents, color, pos: new THREE.Vector3(), vel: new THREE.Vector3(), target: new THREE.Vector3(), phase: Math.random() * 6, k: 3, ready: false };
+}
+
+function stepJelly(j, dt, t, kick) {
+  const k = j.k, c = 2 * Math.sqrt(k) * 0.9;
+  j.vel.x += ((j.target.x - j.pos.x) * k - j.vel.x * c) * dt;
+  j.vel.y += ((j.target.y - j.pos.y) * k - j.vel.y * c) * dt;
+  j.vel.z += ((j.target.z - j.pos.z) * k - j.vel.z * c) * dt;
+  j.pos.addScaledVector(j.vel, dt);
+  const speed = j.vel.length();
+  j.group.position.set(j.pos.x, j.pos.y + Math.sin(t * 0.8 + j.phase) * 0.1, j.pos.z);
+  j.group.rotation.z += (clamp(-j.vel.x * 0.12, -0.45, 0.45) - j.group.rotation.z) * Math.min(1, dt * 4);
+  j.group.rotation.x += (clamp(j.vel.z * 0.1, -0.3, 0.3) + Math.sin(t * 0.6 + j.phase) * 0.04 - j.group.rotation.x) * Math.min(1, dt * 4);
+  const s = Math.sin(j.phase), kk = 1 + kick * 0.12;
+  j.bell.scale.set((1 + 0.1 * s) * kk, (0.75 - 0.12 * s) * kk, (1 + 0.1 * s) * kk);
+  j.halo.material.opacity = 0.42 + 0.12 * s + kick * 0.2;
+  j.group.updateMatrixWorld(true);
+
+  let idx = 0;
+  j.tents.forEach((T) => {
+    tmp.copy(T.att).applyMatrix4(j.group.matrixWorld);
+    if (!j.ready) { for (let i = 0; i < SEG; i++) T.pts.push(new THREE.Vector3(tmp.x, tmp.y - i * T.seg, tmp.z)); }
+    T.pts[0].copy(tmp);
+    for (let i = 1; i < SEG; i++) {
+      const p = T.pts[i], prev = T.pts[i - 1];
+      p.y -= dt * 0.7;
+      p.x += Math.sin(t * 1.8 + i * 0.6 + T.seed) * 0.004;
+      p.z += Math.cos(t * 1.5 + i * 0.5 + T.seed) * 0.004;
+      tmp.copy(p).sub(prev);
+      const len = tmp.length() || 1e-4;
+      p.copy(prev).addScaledVector(tmp, T.seg / len);
+    }
+    for (let i = 0; i < SEG; i++) {
+      dummy.position.copy(T.pts[i]);
+      dummy.scale.setScalar(T.r * (1 - (i / SEG) * 0.7));
+      dummy.updateMatrix();
+      j.inst.setMatrixAt(idx++, dummy.matrix);
+    }
+  });
+  j.ready = true;
+  j.inst.instanceMatrix.needsUpdate = true;
+  return speed;
+}
+
+const her = makeJelly(0xff6fa8), him = makeJelly(0x62e6ff);
+her.k = 14; him.k = 1.6;
+
+/* ---------- Partículas ---------- */
+const PN = 320;
+const pPos = new Float32Array(PN * 3), pCol = new Float32Array(PN * 3), pBase = new Float32Array(PN * 3), pVel = new Float32Array(PN * 3), pLife = new Float32Array(PN), pMax = new Float32Array(PN);
+for (let i = 0; i < PN; i++) pPos[i * 3 + 2] = -999;
+const pGeo = new THREE.BufferGeometry();
+pGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+pGeo.setAttribute("color", new THREE.BufferAttribute(pCol, 3));
+const pPoints = new THREE.Points(pGeo, new THREE.PointsMaterial({ size: 0.34, map: GLOW, vertexColors: true, transparent: true, blending: ADD, depthWrite: false }));
+pPoints.frustumCulled = false; scene.add(pPoints);
+let pHead = 0;
+function emit(x, y, z, col, vx, vy, vz, life) {
+  const i = pHead; pHead = (pHead + 1) % PN;
+  pPos[i * 3] = x; pPos[i * 3 + 1] = y; pPos[i * 3 + 2] = z;
+  pBase[i * 3] = col.r; pBase[i * 3 + 1] = col.g; pBase[i * 3 + 2] = col.b;
+  pVel[i * 3] = vx; pVel[i * 3 + 1] = vy; pVel[i * 3 + 2] = vz;
+  pLife[i] = pMax[i] = life;
+}
+function updateParticles(dt) {
+  for (let i = 0; i < PN; i++) {
+    if (pLife[i] <= 0) continue;
+    pLife[i] -= dt;
+    if (pLife[i] <= 0) { pPos[i * 3 + 2] = -999; pCol[i * 3] = pCol[i * 3 + 1] = pCol[i * 3 + 2] = 0; continue; }
+    pPos[i * 3] += pVel[i * 3] * dt; pPos[i * 3 + 1] += pVel[i * 3 + 1] * dt; pPos[i * 3 + 2] += pVel[i * 3 + 2] * dt;
+    const f = pLife[i] / pMax[i];
+    pCol[i * 3] = pBase[i * 3] * f; pCol[i * 3 + 1] = pBase[i * 3 + 1] * f; pCol[i * 3 + 2] = pBase[i * 3 + 2] * f;
+  }
+  pGeo.attributes.position.needsUpdate = true; pGeo.attributes.color.needsUpdate = true;
+}
+const PINK = new THREE.Color(0xff6fa8), AQUA = new THREE.Color(0x62e6ff), HEARTC = new THREE.Color(0xffa6c8);
+function heartBurst(cx, cy, sc) {
+  const n = 64;
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    const x = (16 * Math.pow(Math.sin(t), 3)) / 17;
+    const y = (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) / 17;
+    emit(cx + x * sc, cy + y * sc, 0.4, i % 3 ? HEARTC : WHITE, x * 0.18, y * 0.18, 0, 2.4);
+  }
+}
+
+/* Plancton ambiente */
+const plankton = (() => {
+  const n = 130, pos = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { pos[i * 3] = (Math.random() - 0.5) * 30; pos[i * 3 + 1] = (Math.random() - 0.5) * 18; pos[i * 3 + 2] = -6 + Math.random() * 8; }
+  const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ size: 0.16, map: GLOW, color: 0x9fd4ff, transparent: true, opacity: 0.5, blending: ADD, depthWrite: false }));
+  p.frustumCulled = false; scene.add(p); return { p, pos, n };
+})();
+
+/* ---------- Tamaño ---------- */
+const B = { hw: 4, hh: 6 };
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  const dist = Math.max(11, 8.3 / camera.aspect);
+  camera.position.set(0, 0, dist);
+  camera.updateProjectionMatrix();
+  B.hh = Math.tan((camera.fov * Math.PI) / 360) * dist;
+  B.hw = B.hh * camera.aspect;
+}
+addEventListener("resize", resize);
+resize();
+const cx = (x) => clamp(x, -(B.hw - 1.0), B.hw - 1.0);
+const cy = (y) => clamp(y, -B.hh * 0.5, B.hh * 0.72);
+
+her.pos.set(-B.hw * 0.3, -B.hh * 0.15, 0); him.pos.set(B.hw * 0.4, B.hh * 0.35, 0);
+her.target.copy(her.pos); him.target.copy(him.pos);
+
+/* ---------- Interacción ---------- */
+function toWorld(e) {
+  S.px = (e.clientX / innerWidth * 2 - 1) * B.hw;
+  S.py = -(e.clientY / innerHeight * 2 - 1) * B.hh;
+}
+function beginHold() {
+  if (!S.down || S.letterOpen) return;
+  S.hold = true;
+  S.orbit = Math.atan2(him.pos.y - her.pos.y, him.pos.x - her.pos.x);
+  say(rand(CONFIG.approach), 2200);
+}
+canvas.addEventListener("pointerdown", (e) => {
+  if (!S.started || S.letterOpen) return;
+  canvas.setPointerCapture(e.pointerId);
+  toWorld(e);
+  S.down = true; S.downT = performance.now(); S.moved = 0; S.lx = e.clientX; S.ly = e.clientY; S.touched = true; S.lastAct = performance.now();
+  clearTimeout(S.holdT); S.holdT = setTimeout(beginHold, 350);
+});
+canvas.addEventListener("pointermove", (e) => {
+  if (e.pointerType === "mouse") S.mouse = true;
+  toWorld(e);
+  if (S.down) { S.moved += Math.hypot(e.clientX - S.lx, e.clientY - S.ly); S.lx = e.clientX; S.ly = e.clientY; S.lastAct = performance.now(); }
+});
+function release(cancelled) {
+  if (!S.down) return;
+  S.down = false; clearTimeout(S.holdT);
+  const dur = performance.now() - S.downT, wasHold = S.hold;
+  S.hold = false;
+  if (wasHold) {
+    if (S.counted) say(rand(CONFIG.leave), 3500);
+    else if (S.tog > 0.5) say("Un poquito más… no me sueltes todavía.");
+    S.counted = false;
+    return;
+  }
+  if (!cancelled && dur < 350 && S.moved < 14) {
+    S.tapT = performance.now(); S.herKick = 1; S.hisFlash = 1;
+    chime(520 + Math.random() * 200);
+    for (let i = 0; i < 14; i++) emit(her.pos.x, her.pos.y, 0.3, PINK, (Math.random() - 0.5) * 2.5, (Math.random() - 0.3) * 2.5, 0, 1.2);
+    if (Math.random() < 0.75) say(rand(CONFIG.taps), 3000);
+  }
+}
+canvas.addEventListener("pointerup", () => release(false));
+canvas.addEventListener("pointercancel", () => release(true));
+canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* ---------- Carta ---------- */
+function openLetter() {
+  S.letterOpen = true; S.hold = false;
+  $("letter").hidden = false;
+  chime(660); setTimeout(() => chime(880), 160);
+  burstDom(innerWidth / 2, innerHeight * 0.6, 16, 220);
+  $("closeLetter").focus();
+}
+function closeLetter() { S.letterOpen = false; $("letter").hidden = true; S.lastAct = performance.now(); $("gift").focus(); }
+$("gift").addEventListener("click", openLetter);
+$("closeLetter").addEventListener("click", closeLetter);
+$("letter").addEventListener("click", (e) => { if (e.target === $("letter")) closeLetter(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.letterOpen) closeLetter(); });
+
+/* ---------- Inicio ---------- */
+$("start").addEventListener("click", () => {
+  audio(); startPad(); chime(740);
+  const intro = $("intro"); intro.classList.add("out");
+  setTimeout(() => (intro.hidden = true), 650);
+  S.started = true; S.lastAct = performance.now();
+  $("tagHer").classList.add("on"); $("tagHim").classList.add("on");
+  const visits = store.get("medusas-visits", 0); store.set("medusas-visits", visits + 1);
+  setTimeout(() => say(visits > 0 ? rand(CONFIG.returning) : CONFIG.greetings[0], 4200), 600);
+  if (S.meets >= CONFIG.meetsToUnlock) { $("gift").classList.add("show"); $("hint").classList.add("gone"); }
+});
+setInterval(() => {
+  if (!S.started || S.down || S.letterOpen) return;
+  if (performance.now() - S.lastAct > 13000) say(rand(CONFIG.idle), 3800);
+}, 1000);
+
+function meet() {
+  S.counted = true; S.meets++; store.set("medusas-meets", S.meets); updateMeter();
+  const mx = (her.pos.x + him.pos.x) / 2, my = (her.pos.y + him.pos.y) / 2 + 0.3;
+  heartBurst(mx, my, 1.7);
+  burstDom(innerWidth / 2, innerHeight * 0.45, 12, 160);
+  chime(880); setTimeout(() => chime(1175), 180);
+  $("hint").classList.add("gone");
+  if (S.meets === CONFIG.meetsToUnlock) {
+    say(CONFIG.meets[0]);
+    setTimeout(() => { say(CONFIG.unlock, 4500); $("gift").classList.add("show"); chime(990); }, 2600);
+  } else say(rand(CONFIG.meets));
+}
+
+/* ---------- Animación ---------- */
+const clock = new THREE.Clock(), proj = new THREE.Vector3();
+function placeTag(el, j) {
+  proj.set(j.pos.x, j.pos.y + 1.3, 0).project(camera);
+  el.style.transform = "translate(" + ((proj.x * 0.5 + 0.5) * innerWidth) + "px," + ((-proj.y * 0.5 + 0.5) * innerHeight) + "px) translate(-50%,-50%)";
+}
+
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime, now = performance.now();
+
+  // objetivo de ella
+  let hx, hy;
+  if (S.down || S.mouse) { hx = S.px; hy = S.py + 1.1; S.touched = true; S.tx = hx; S.ty = hy; }
+  else if (S.touched) { hx = S.tx + Math.sin(t * 0.7) * 0.35; hy = S.ty + Math.sin(t * 0.9 + 1) * 0.3; }
+  else { hx = -B.hw * 0.3 + Math.sin(t * 0.5) * 0.6; hy = -B.hh * 0.15 + Math.sin(t * 0.7) * 0.4; }
+  her.target.set(cx(hx), cy(hy), 0);
+
+  // objetivo de él
+  const dist = him.pos.distanceTo(her.pos);
+  const together = S.hold && dist < 2.1;
+  if (S.hold) {
+    if (together) S.orbit += dt * 1.1;
+    him.target.set(cx(her.pos.x + Math.cos(S.orbit) * 1.15), cy(her.pos.y + Math.sin(S.orbit) * 0.55 + 0.1), Math.sin(S.orbit) * 0.8);
+    him.k = 4;
+  } else if (now - S.tapT < 4000) {
+    him.target.set(cx(her.pos.x + (her.pos.x > 0 ? -3 : 3)), cy(her.pos.y + 0.6), 0); him.k = 2.4;
+  } else {
+    him.target.set(cx(-her.pos.x * 0.7 + Math.sin(t * 0.23) * B.hw * 0.5), cy(-her.pos.y * 0.5 + 0.8 + Math.sin(t * 0.31) * B.hh * 0.35), 0); him.k = 1.6;
+  }
+
+  // tiempo juntos y latido
+  S.tog = together ? S.tog + dt : Math.max(0, S.tog - dt * 2);
+  if (together && S.tog > 2.6 && !S.counted) meet();
+  if (together) {
+    S.beatT += dt;
+    if (S.beatT >= 0.9) { S.beatT = 0; S.kick = 1; thump(); if (navigator.vibrate) navigator.vibrate([25, 90, 35]); }
+    S.emitT += dt;
+    if (S.emitT > 0.1) {
+      S.emitT = 0;
+      const mx = (her.pos.x + him.pos.x) / 2, my = (her.pos.y + him.pos.y) / 2;
+      for (let i = 0; i < 2; i++) emit(mx + (Math.random() - 0.5) * 1.2, my + (Math.random() - 0.5) * 0.8, 0.3, Math.random() < 0.5 ? PINK : AQUA, (Math.random() - 0.5) * 0.4, 0.5 + Math.random() * 0.6, 0, 1.6);
+    }
+  } else S.beatT = 0.7;
+  S.kick = Math.max(0, S.kick - dt * 3);
+  S.herKick = Math.max(0, S.herKick - dt * 2.5);
+  S.hisFlash = Math.max(0, S.hisFlash - dt * 1.2);
+
+  // pulso: al estar juntos, laten al unísono
+  const sp1 = stepJelly(her, dt, t, Math.max(S.kick, S.herKick));
+  her.phase += dt * (2.4 + sp1 * 1.2);
+  him.phase = together ? her.phase : him.phase + dt * (2.0 + him.vel.length() * 1.2);
+  const sp2 = stepJelly(him, dt, t, Math.max(S.kick, S.hisFlash * 0.6));
+  her.bellMat.uniforms.uGlow.value = S.herKick * 0.6 + (together ? 0.5 : 0);
+  him.bellMat.uniforms.uGlow.value = S.hisFlash * 0.9 + (together ? 0.5 : 0);
+
+  // estela de luz al nadar
+  if (sp1 > 0.9 && Math.random() < 0.6) emit(her.pos.x + (Math.random() - 0.5) * 0.8, her.pos.y, 0, PINK, (Math.random() - 0.5) * 0.3, -0.1, 0, 1.1);
+  if (sp2 > 0.9 && Math.random() < 0.6) emit(him.pos.x + (Math.random() - 0.5) * 0.8, him.pos.y, 0, AQUA, (Math.random() - 0.5) * 0.3, -0.1, 0, 1.1);
+  updateParticles(dt);
+
+  // plancton
+  const pp = plankton.pos;
+  for (let i = 0; i < plankton.n; i++) {
+    pp[i * 3 + 1] += dt * (0.12 + (i % 5) * 0.03);
+    pp[i * 3] += Math.sin(t * 0.3 + i) * dt * 0.05;
+    if (pp[i * 3 + 1] > 9) pp[i * 3 + 1] = -9;
+  }
+  plankton.p.geometry.attributes.position.needsUpdate = true;
+
+  placeTag($("tagHer"), her); placeTag($("tagHim"), him);
+  renderer.render(scene, camera);
+}
+frame();
+</script>
+</body>
+</html>
